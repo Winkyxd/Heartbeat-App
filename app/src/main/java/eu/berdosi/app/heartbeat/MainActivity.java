@@ -6,16 +6,22 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -23,12 +29,22 @@ import android.view.TextureView;
 import android.view.Surface;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.Locale;
+import com.google.code.regexp.Pattern;
+import com.google.code.regexp.Matcher;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
     private OutputAnalyzer analyzer;
@@ -44,6 +60,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
     private boolean justShared = false;
 
+    private String uId = "";
+    private String email = "";
+
     @SuppressLint("HandlerLeak")
     private final Handler mainHandler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -56,6 +75,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             if (msg.what == MESSAGE_UPDATE_FINAL) {
                 ((EditText) findViewById(R.id.editText)).setText(msg.obj.toString());
+
+                Toast.makeText(MainActivity.this, "End of Measurement", Toast.LENGTH_SHORT).show();
 
                 // make sure menu items are enabled when it opens.
                 Menu appMenu = ((Toolbar) findViewById(R.id.toolbar)).getMenu();
@@ -123,6 +144,9 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        uId = getIntent().getStringExtra("uId");
+        email = getIntent().getStringExtra("email");
+
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.CAMERA},
                 REQUEST_CODE_CAMERA);
@@ -186,9 +210,12 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     public void onClickExportDetails(MenuItem item) {
-        final Intent intent = getTextIntent(((EditText) findViewById(R.id.editText)).getText().toString());
+//        final Intent intent = getTextIntent(((EditText) findViewById(R.id.editText)).getText().toString());
+//        justShared = true;
+//        startActivity(Intent.createChooser(intent, getString(R.string.send_output_to)));
+
+        generateCSV(((EditText) findViewById(R.id.editText)).getText().toString());
         justShared = true;
-        startActivity(Intent.createChooser(intent, getString(R.string.send_output_to)));
     }
 
     private Intent getTextIntent(String intentText) {
@@ -206,4 +233,114 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         intent.putExtra(Intent.EXTRA_TEXT, intentText);
         return intent;
     }
+
+    // CSV : UserId, UserName, Pulse, Cycles, Duration, timestamp, value
+    public void generateCSV(String text){
+
+        String columnString =   "\"UserId\",\"Email\",\"Pulse\",\"Cycles\",\"Duration\",\"Timestamp\",\"Value\"";
+        String pulse = "";
+        String cycles = "";
+        String durations = "";
+        List<MeasurementResult> measurements = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile("(Pulse: (?<pulse>.*) \\((?<cycles>.*) cycles in (?<duration>.*) second|((?<timestamp>\\d..*),(?<value>..*)))");
+        Matcher matcher = pattern.matcher(text);
+        while (matcher.find()){
+            if(pulse.isEmpty() && cycles.isEmpty() && durations.isEmpty()){
+                pulse = matcher.group("pulse");
+                cycles = matcher.group("cycles");
+                durations = matcher.group("duration");
+            }else {
+                measurements.add(new MeasurementResult(matcher.group("timestamp"),matcher.group("value")));
+            }
+        }
+
+        String dataString   =   "";
+        for (MeasurementResult result: measurements) {
+            dataString   +=   "\"" + uId +"\",\"" + email + "\",\"" + pulse + "\",\"" + cycles + "\",\"" + durations + "\",\"" + result.timestamp+ "\",\"" + result.values + "\"" + "\n" ;
+        }
+
+        String combinedString = columnString + "\n" + dataString;
+
+        Log.e("Result CSV", "generateCSV: "+ combinedString );
+//
+//        File file   = null;
+//        File root   = Environment.getExternalStorageDirectory();
+//        if (root.canWrite()){
+//            File dir    =   new File (root.getAbsolutePath() + "/PersonData");
+//            dir.mkdirs();
+//            file   =   new File(dir, "Data.csv");
+//            FileOutputStream out   =   null;
+//            try {
+//                out = new FileOutputStream(file);
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//            }
+//            try {
+//                out.write(combinedString.getBytes());
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            try {
+//                out.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        Uri uri = null;
+//        uri = Uri.fromFile(file);
+
+        Intent shareIntent = new Intent();
+        shareIntent.setAction(Intent.ACTION_SEND);
+        shareIntent.setType("text/csv");
+        File data = null;
+        try {
+            Date dateVal = new Date();
+            String filename = dateVal.toString();
+            data = File.createTempFile("Report", ".csv");
+            FileWriter out = (FileWriter) generateCsvFile(
+                    data, combinedString);
+            Uri uri = FileProvider.getUriForFile(
+                    MainActivity.this,
+                    "eu.berdosi.app.heartbeat.provider", //(use your app signature + ".provider" )
+                    data);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+            startActivity(Intent.createChooser(shareIntent, "Share Result to"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public FileWriter generateCsvFile(File sFileName,String fileContent) {
+        FileWriter writer = null;
+
+        try {
+            writer = new FileWriter(sFileName);
+            writer.append(fileContent);
+            writer.flush();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally
+        {
+            try {
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return writer;
+    }
+
+    class MeasurementResult{
+        public String timestamp;
+        public String values;
+        MeasurementResult(String t, String v){
+            timestamp = t;
+            values = v;
+        }
+    }
 }
+
+
