@@ -20,7 +20,7 @@ class OutputAnalyzer {
     private MeasureStore store;
 
     private final int measurementInterval = 45;
-    private final int measurementLength = 30000; // ensure the number of data points is the power of two
+    private final int measurementLength = 120000; // ensure the number of data points is the power of two
     private final int clipLength = 3500;
 
     private int detectedValleys = 0;

@@ -15,6 +15,13 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
+import eu.berdosi.app.heartbeat.api.ApiClient;
+import eu.berdosi.app.heartbeat.api.ApiInterface;
+import eu.berdosi.app.heartbeat.api.response.BaseDao;
+import eu.berdosi.app.heartbeat.api.response.SignalDAO;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 import android.os.Environment;
 import android.os.Handler;
@@ -45,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import com.google.code.regexp.Pattern;
 import com.google.code.regexp.Matcher;
+import com.google.gson.Gson;
 
 public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {
     private OutputAnalyzer analyzer;
@@ -77,6 +85,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 ((EditText) findViewById(R.id.editText)).setText(msg.obj.toString());
 
                 Toast.makeText(MainActivity.this, "End of Measurement", Toast.LENGTH_SHORT).show();
+
+                pushToDB(msg.obj.toString());
 
                 // make sure menu items are enabled when it opens.
                 Menu appMenu = ((Toolbar) findViewById(R.id.toolbar)).getMenu();
@@ -235,6 +245,54 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     }
 
     // CSV : UserId, UserName, Pulse, Cycles, Duration, timestamp, value
+    public void pushToDB(String text){
+
+        String columnString =   "\"UserId\",\"Email\",\"Pulse\",\"Cycles\",\"Duration\",\"Timestamp\",\"Value\"";
+        String pulse = "";
+        String cycles = "";
+        String durations = "";
+        List<MeasurementResult> measurements = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile("(Pulse: (?<pulse>.*) \\((?<cycles>.*) cycles in (?<duration>.*) second|((?<timestamp>\\d..*),(?<value>..*)))");
+        Matcher matcher = pattern.matcher(text);
+        while (matcher.find()){
+            if(pulse.isEmpty() && cycles.isEmpty() && durations.isEmpty()){
+                pulse = matcher.group("pulse");
+                cycles = matcher.group("cycles");
+                durations = matcher.group("duration");
+            }else {
+                measurements.add(new MeasurementResult(matcher.group("timestamp"),matcher.group("value")));
+            }
+        }
+
+        Gson gson = new Gson();
+        String json = gson.toJson(measurements);
+
+        Log.e("Result Dao", "pushToDB: "+json);
+
+        ApiInterface apiClient = new ApiClient().getClient(ApiClient.BASE_URL).create(ApiInterface.class);
+        apiClient.doInputSignal(uId,pulse,cycles,durations,json).enqueue(new Callback<BaseDao<SignalDAO>>() {
+            @Override
+            public void onResponse(Call<BaseDao<SignalDAO>> call, Response<BaseDao<SignalDAO>> response) {
+                if(response.body().getCode() == 1){
+                    Toast.makeText(MainActivity.this, "Berhasil Memasukkan data ke database",
+                            Toast.LENGTH_SHORT).show();
+                }else {
+                    Toast.makeText(MainActivity.this, "Gagal Memasukkan data ke database",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<BaseDao<SignalDAO>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Authentication failed.",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
+    // CSV : UserId, UserName, Pulse, Cycles, Duration, timestamp, value
     public void generateCSV(String text){
 
         String columnString =   "\"UserId\",\"Email\",\"Pulse\",\"Cycles\",\"Duration\",\"Timestamp\",\"Value\"";
@@ -263,33 +321,6 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         String combinedString = columnString + "\n" + dataString;
 
         Log.e("Result CSV", "generateCSV: "+ combinedString );
-//
-//        File file   = null;
-//        File root   = Environment.getExternalStorageDirectory();
-//        if (root.canWrite()){
-//            File dir    =   new File (root.getAbsolutePath() + "/PersonData");
-//            dir.mkdirs();
-//            file   =   new File(dir, "Data.csv");
-//            FileOutputStream out   =   null;
-//            try {
-//                out = new FileOutputStream(file);
-//            } catch (FileNotFoundException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                out.write(combinedString.getBytes());
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                out.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//
-//        Uri uri = null;
-//        uri = Uri.fromFile(file);
 
         Intent shareIntent = new Intent();
         shareIntent.setAction(Intent.ACTION_SEND);
