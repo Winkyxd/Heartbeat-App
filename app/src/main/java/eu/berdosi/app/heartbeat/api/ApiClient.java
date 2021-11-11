@@ -14,7 +14,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
-    public static String BASE_URL = "http://192.168.1.6/ppg/";
+    public static String BASE_URL = "https://ppg-heartrate.000webhostapp.com/";
     private Retrofit mApi = null;
 
     public Retrofit getClient(String baseUrl){
