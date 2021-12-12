@@ -3,6 +3,7 @@ package eu.berdosi.app.heartbeat.api;
 import java.util.List;
 
 import eu.berdosi.app.heartbeat.api.response.BaseDao;
+import eu.berdosi.app.heartbeat.api.response.DiagnosticDAO;
 import eu.berdosi.app.heartbeat.api.response.SignalDAO;
 import eu.berdosi.app.heartbeat.api.response.UserDAO;
 import retrofit2.Call;
@@ -48,5 +49,20 @@ public interface ApiInterface {
             @Field("cycles") String cycles,
             @Field("duration") String duration,
             @Field("signals") String signals
+    );
+
+    @POST("api/DoInputDiagnostic.php")
+    @FormUrlEncoded
+    Call<BaseDao<String>> doInputDiagnosa(
+            @Field("user_id") String user_id,
+            @Field("perokok") int perokok,
+            @Field("diabetes") int diabetes,
+            @Field("kolestrol") int kolestrol,
+            @Field("hipertensi") int hipertensi
+    );
+
+    @GET("api/GetDiagnostic.php")
+    Call<BaseDao<List<DiagnosticDAO>>> getDiagnosa(
+            @Query("user_id") String user_id
     );
 }

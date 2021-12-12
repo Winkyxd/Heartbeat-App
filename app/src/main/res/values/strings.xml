@@ -1,4 +1,9 @@
 <resources>
+    <plurals name="measurement_output_template">
+        <item quantity="zero">Pulse: %2.1f (%d cycle in %2.1f seconds)</item>
+        <item quantity="one">Pulse: %2.1f (%d cycle in %2.1f seconds)</item>
+        <item quantity="other">Pulse: %2.1f (%d cycles in %2.1f seconds)</item>
+    </plurals>
     <string name="app_name">HeartBeat</string>
     <string name="output_hint">
         Please place your finger on the device\'s camera, covering the flash as well. After
@@ -24,11 +29,6 @@
     <string name="dateFormat">yyyy-MM-dd\'T\'HH:mm:ssZZZZZ</string>
     <string name="dateFormatGranular">yyyy-MM-dd\'T\'HH:mm:ss.SSSZZZZZ</string>
     <string name="camera_not_found">Camera not available.</string>
-    <plurals name="measurement_output_template">
-        <item quantity="zero">Pulse: %2.1f (%d cycle in %2.1f seconds)</item>
-        <item quantity="one">Pulse: %2.1f (%d cycle in %2.1f seconds)</item>
-        <item quantity="other">Pulse: %2.1f (%d cycles in %2.1f seconds)</item>
-    </plurals>
     <string name="title_activity_login">LoginActivity</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password</string>

@@ -59,7 +59,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onResponse(Call<BaseDao<UserDAO>> call, Response<BaseDao<UserDAO>> response) {
                 if(response.body().getCode() == 1){
 
-                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                    Intent intent = new Intent(LoginActivity.this, DiagnosaActivity.class);
                     intent.putExtra("uId", response.body().getData().user_id);
                     intent.putExtra("email", response.body().getData().email);
                     startActivity(intent);

@@ -278,6 +278,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                     Toast.makeText(MainActivity.this, "Berhasil Memasukkan data ke database",
                             Toast.LENGTH_SHORT).show();
                 }else {
+                    Log.e("PushToDB", "onResponse: "+response.message() );
                     Toast.makeText(MainActivity.this, "Gagal Memasukkan data ke database",
                             Toast.LENGTH_SHORT).show();
                 }
@@ -285,7 +286,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
             @Override
             public void onFailure(Call<BaseDao<SignalDAO>> call, Throwable t) {
-                Toast.makeText(MainActivity.this, "Authentication failed.",
+                Toast.makeText(MainActivity.this, "failed.",
                         Toast.LENGTH_SHORT).show();
             }
         });
